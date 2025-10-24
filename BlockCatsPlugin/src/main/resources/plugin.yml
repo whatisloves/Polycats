@@ -1,0 +1,24 @@
+name: BlockCatsPlugin
+version: 1.0.0
+main: xyz.blockcats.BlockCatsPlugin
+api-version: '1.21'
+author: BlockCats Team
+description: BlockCats NFT integration for Minecraft
+
+commands:
+  linkwallet:
+    description: Link your wallet address
+    usage: /linkwallet <address>
+    permission: blockcats.link
+  spawncat:
+    description: Manually spawn a BlockCat for testing
+    usage: /spawncat
+    permission: blockcats.spawn
+
+permissions:
+  blockcats.link:
+    description: Allow linking wallet
+    default: true
+  blockcats.spawn:
+    description: Allow manual cat spawning
+    default: op

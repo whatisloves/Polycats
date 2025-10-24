@@ -1,0 +1,22 @@
+# BlockCats Configuration
+
+# Backend API settings
+api:
+  url: "http://localhost:3000"
+  secret: "dev-secret-12345"
+
+# Spawn settings
+spawn:
+  interval-minutes: 1
+  enabled: true
+
+# Messages
+messages:
+  prefix: "§6[BlockCats]§r "
+  spawn: "§eA new BlockCat appeared at §b{x}, {y}, {z}§e! Be first to tame it!"
+  claimed: "§aYou claimed BlockCat #{id}! NFT is being minted..."
+  already-claimed: "§cYou already claimed your daily BlockCat!"
+  link-wallet: "§aWallet linked successfully!"
+  no-wallet: "§cPlease link your wallet first: /linkwallet <address>"
+  invalid-wallet: "§cInvalid wallet address format!"
+  spawn-manual: "§6Spawned a BlockCat for testing!"
