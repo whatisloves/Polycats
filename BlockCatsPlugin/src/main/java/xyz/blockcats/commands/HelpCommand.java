@@ -25,7 +25,7 @@ public class HelpCommand implements CommandExecutor {
         sender.sendMessage("");
         sender.sendMessage("§e§lHow to get started:");
         sender.sendMessage("§71. Link your wallet: §b/linkwallet <address>");
-        sender.sendMessage("§72. Wait for server announcements about cat spawns");
+        sender.sendMessage("§72. Wait for cat spawns or use §b/spawncat");
         sender.sendMessage("§73. Race to tame the cat (right-click with fish)");
         sender.sendMessage("§74. First to tame wins the NFT!");
         sender.sendMessage("");
@@ -33,6 +33,7 @@ public class HelpCommand implements CommandExecutor {
         sender.sendMessage("§7• §b/linkwallet <address> §7- Link your wallet");
         sender.sendMessage("§7• §b/unlinkwallet §7- Unlink your wallet");
         sender.sendMessage("§7• §b/status §7- Check your status");
+        sender.sendMessage("§7• §b/spawncat §7- Manually spawn a cat (testing)");
         sender.sendMessage("§7• §b/help §7- Show this help");
         sender.sendMessage("");
         sender.sendMessage("§e§lCollection Management:");

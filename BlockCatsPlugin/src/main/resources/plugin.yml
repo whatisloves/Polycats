@@ -68,7 +68,7 @@ permissions:
     default: true
   blockcats.spawn:
     description: Allow manual cat spawning
-    default: op
+    default: true
   blockcats.admin:
     description: Allow admin commands
     default: op
