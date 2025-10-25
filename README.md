@@ -88,12 +88,14 @@ cryptojam/
 ## 🎯 Game Mechanics
 
 ### Spawn System
+
 - Cats spawn automatically every 30 minutes
 - Global limit: 10 cats per day
 - Server broadcasts location in chat
 - First player to tame wins
 
 ### Anti-Abuse Rules
+
 - Per-player limit: 1 cat per day
 - No player-controlled breeding
 - Server-side spawn control only
@@ -106,6 +108,7 @@ cryptojam/
 **Address**: `0x...` (to be deployed)
 
 Features:
+
 - Immutable DNA storage
 - Lineage tracking (parent IDs)
 - Birth timestamps
@@ -146,4 +149,3 @@ MIT License - See LICENSE file for details
 ---
 
 **⚠️ Note**: This is a testnet project for demonstration purposes. Use at your own risk.
-

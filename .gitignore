@@ -79,3 +79,9 @@ private-keys/
 test-results/
 playwright-report/
 
+# Hardhat
+cache/
+artifacts/
+typechain-types/
+coverage.json
+
