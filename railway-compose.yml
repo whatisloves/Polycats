@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # Backend API Service for Railway
+  backend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - POLYGON_AMOY_RPC_URL=${POLYGON_AMOY_RPC_URL}
+      - DEPLOYER_PRIVATE_KEY=${DEPLOYER_PRIVATE_KEY}
+      - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY}
+      - CONTRACT_ADDRESS=${CONTRACT_ADDRESS}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/minecraft/spawn"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Minecraft Server Service for Railway
+  minecraft:
+    build:
+      context: ./minecraft-server
+      dockerfile: Dockerfile
+    environment:
+      - JAVA_OPTS=-Xmx2G -Xms1G
+      - SERVER_PORT=25565
+      - API_URL=${BACKEND_URL}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "25565"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

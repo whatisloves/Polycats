@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    image: your-dockerhub-username/blockcats-backend:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - POLYGON_AMOY_RPC_URL=${POLYGON_AMOY_RPC_URL}
+      - DEPLOYER_PRIVATE_KEY=${DEPLOYER_PRIVATE_KEY}
+      - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY}
+      - CONTRACT_ADDRESS=${CONTRACT_ADDRESS}
+    networks:
+      - blockcats-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/minecraft/spawn"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  # Minecraft Server Service
+  minecraft:
+    image: your-dockerhub-username/blockcats-minecraft:latest
+    ports:
+      - "25565:25565"
+    environment:
+      - JAVA_OPTS=-Xmx2G -Xms1G
+      - SERVER_PORT=25565
+      - API_URL=http://backend:3000
+    volumes:
+      - minecraft-data:/minecraft
+      - minecraft-logs:/minecraft/logs
+    networks:
+      - blockcats-network
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "25565"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+          cpus: '1.0'
+        reservations:
+          memory: 2G
+          cpus: '0.5'
+
+  # Nginx Reverse Proxy (Optional)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - blockcats-network
+    restart: unless-stopped
+    depends_on:
+      - backend
+    profiles:
+      - proxy
+
+volumes:
+  minecraft-data:
+    driver: local
+  minecraft-logs:
+    driver: local
+
+networks:
+  blockcats-network:
+    driver: bridge

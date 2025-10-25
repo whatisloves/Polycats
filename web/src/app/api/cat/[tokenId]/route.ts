@@ -9,8 +9,9 @@ interface DeleteRequest {
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { tokenId: string } }
+  context: { params: Promise<{ tokenId: string }> }
 ) {
+  const { tokenId } = await context.params;
   // Verify API secret
   const secret = request.headers.get('X-Plugin-Secret');
   if (secret !== API_SECRET) {
@@ -20,11 +21,11 @@ export async function DELETE(
     );
   }
 
-  const tokenId = parseInt(params.tokenId);
+  const tokenIdNum = parseInt(tokenId);
   const body: DeleteRequest = await request.json();
 
   // Get cat
-  const cat = getCat(tokenId);
+  const cat = getCat(tokenIdNum);
 
   if (!cat) {
     return NextResponse.json({
@@ -43,7 +44,7 @@ export async function DELETE(
 
   // Check not active cat
   const inventory = getInventory(body.ownerWallet);
-  if (inventory.activeCatId === tokenId) {
+  if (inventory.activeCatId === tokenIdNum) {
     return NextResponse.json({
       success: false,
       error: 'Cannot delete active cat. Switch to another cat first.',
@@ -51,7 +52,7 @@ export async function DELETE(
   }
 
   // Delete cat
-  const success = deleteCat(tokenId);
+  const success = deleteCat(tokenIdNum);
 
   if (!success) {
     return NextResponse.json({
@@ -62,7 +63,7 @@ export async function DELETE(
 
   return NextResponse.json({
     success: true,
-    deletedTokenId: tokenId,
+    deletedTokenId: tokenIdNum,
     deletedCatName: cat.name,
     message: `${cat.name} has been deleted`,
   });

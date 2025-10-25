@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # Backend API Service from Docker Hub
+  backend:
+    image: your-dockerhub-username/blockcats-backend:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - POLYGON_AMOY_RPC_URL=${POLYGON_AMOY_RPC_URL}
+      - DEPLOYER_PRIVATE_KEY=${DEPLOYER_PRIVATE_KEY}
+      - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY}
+      - CONTRACT_ADDRESS=${CONTRACT_ADDRESS}
+    networks:
+      - blockcats-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/minecraft/spawn"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Minecraft Server Service from Docker Hub
+  minecraft:
+    image: your-dockerhub-username/blockcats-minecraft:latest
+    ports:
+      - "25565:25565"
+    environment:
+      - JAVA_OPTS=-Xmx2G -Xms1G
+      - SERVER_PORT=25565
+      - API_URL=${BACKEND_URL}
+    volumes:
+      - minecraft-data:/minecraft
+    networks:
+      - blockcats-network
+    restart: unless-stopped
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "25565"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  minecraft-data:
+
+networks:
+  blockcats-network:
+    driver: bridge

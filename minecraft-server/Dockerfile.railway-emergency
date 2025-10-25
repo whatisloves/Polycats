@@ -1,0 +1,31 @@
+# EMERGENCY Railway Minecraft Fix
+FROM eclipse-temurin:21-jdk-alpine
+
+# Install curl
+RUN apk add --no-cache curl
+
+# Set working directory
+WORKDIR /minecraft
+
+# Download Paper 1.21.10
+RUN curl -o paper.jar https://api.papermc.io/v2/projects/paper/versions/1.21.10/builds/86/downloads/paper-1.21.10-86.jar
+
+# Copy plugin
+COPY plugins/ ./plugins/
+
+# Create directories
+RUN mkdir -p world world_nether world_the_end logs
+
+# Copy configuration
+COPY server.properties ./
+COPY eula.txt ./
+
+# Railway emergency configuration
+ENV JAVA_OPTS="-Xmx2G -Xms1G"
+ENV PORT=25565
+
+# Expose Minecraft port
+EXPOSE 25565/tcp
+
+# Railway TCP proxy optimized startup
+CMD ["sh", "-c", "echo '🚀 Starting BlockCats Minecraft Server...' && echo '📡 Port: $PORT' && echo '🌐 Railway TCP Proxy Mode' && echo '🔍 Debug mode enabled' && java $JAVA_OPTS -Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false -jar paper.jar nogui --port $PORT --host 0.0.0.0"]

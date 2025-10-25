@@ -7,7 +7,7 @@ api:
 
 # Spawn settings
 spawn:
-  interval-minutes: 1
+  interval-minutes: 3
   enabled: true
 
 # Messages

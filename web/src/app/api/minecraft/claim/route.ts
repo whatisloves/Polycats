@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
     // Extract token ID from CatMinted event
     const mintEvent = receipt.logs.find((log: any) => {
       try {
+        if (!contractWithSigner) return false;
         const parsed = contractWithSigner.interface.parseLog(log);
         return parsed?.name === 'CatMinted';
       } catch {
@@ -76,7 +77,15 @@ export async function POST(request: NextRequest) {
       throw new Error('CatMinted event not found');
     }
 
+    if (!contractWithSigner) {
+      throw new Error('Contract not initialized');
+    }
+    
     const parsedEvent = contractWithSigner.interface.parseLog(mintEvent);
+    if (!parsedEvent) {
+      throw new Error('Failed to parse CatMinted event');
+    }
+    
     const tokenId = Number(parsedEvent.args.tokenId);
 
     console.log(`Cat minted with tokenId: ${tokenId}`);

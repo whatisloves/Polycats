@@ -8,13 +8,14 @@ import {
 
 export async function GET(
   request: Request,
-  { params }: { params: { wallet: string } }
+  context: { params: Promise<{ wallet: string }> }
 ) {
-  const wallet = params.wallet.toLowerCase();
+  const { wallet } = await context.params;
+  const walletLower = wallet.toLowerCase();
 
   // Get player's cats
-  const cats = getCatsByOwner(wallet);
-  const inventory = getInventory(wallet);
+  const cats = getCatsByOwner(walletLower);
+  const inventory = getInventory(walletLower);
 
   // Build response with cat details
   const catsWithStatus = cats.map((cat) => {

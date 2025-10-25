@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# BlockCats Minecraft Railway Deployment Script
+echo "🎮 BlockCats Minecraft Railway Deployment"
+echo "======================================="
+
+echo "📋 Since Railway CLI requires interactive prompts, here's what to do:"
+echo ""
+
+echo "🌐 STEP 1: Go to Railway Dashboard"
+echo "================================="
+echo "1. Visit: https://railway.app/dashboard"
+echo "2. Find your 'BlockCats' project"
+echo "3. Click on the project to open it"
+echo ""
+
+echo "🚀 STEP 2: Add Minecraft Service"
+echo "==============================="
+echo "1. Click 'Add Service' button"
+echo "2. Select 'Deploy from Docker Hub'"
+echo "3. Image: wapiozi/blockcats-minecraft:latest"
+echo "4. Service Name: blockcats-minecraft"
+echo "5. Click 'Deploy'"
+echo ""
+
+echo "⚙️  STEP 3: Set Environment Variables"
+echo "==================================="
+echo "Go to the service and click 'Variables' tab, then add:"
+echo ""
+echo "JAVA_OPTS=-Xmx2G -Xms1G"
+echo "SERVER_PORT=25565"
+echo "API_URL=https://blockcats-production.up.railway.app"
+echo ""
+
+echo "🎮 STEP 4: Deploy and Test"
+echo "========================="
+echo "1. Click 'Deploy' button"
+echo "2. Wait for deployment to complete"
+echo "3. Check logs to ensure it's running"
+echo ""
+
+echo "🌐 STEP 5: Get Your Server URL"
+echo "=============================="
+echo "After deployment, you'll get:"
+echo "- Backend API: https://blockcats-production.up.railway.app"
+echo "- Minecraft Server: blockcats-minecraft-production.up.railway.app:25565"
+echo ""
+
+echo "🧪 STEP 6: Test Your Deployment"
+echo "=============================="
+echo "Test backend API:"
+echo "curl -X POST https://blockcats-production.up.railway.app/api/minecraft/spawn \\"
+echo "  -H 'X-Plugin-Secret: dev-secret-12345' \\"
+echo "  -H 'Content-Type: application/json'"
+echo ""
+echo "Connect to Minecraft:"
+echo "Server Address: blockcats-minecraft-production.up.railway.app:25565"
+echo "Server Name: BlockCats Railway Server"
+echo ""
+
+echo "🎯 Your BlockCats server will be live on Railway! 🐱⚔️"

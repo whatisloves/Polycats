@@ -1,0 +1,5 @@
+# Railway deployment using Docker Hub images
+FROM wapiozi/blockcats-backend:latest
+
+# Railway will use this image directly
+# No additional build steps needed

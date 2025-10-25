@@ -1,0 +1,31 @@
+# Railway Minecraft Server - WORKING VERSION
+FROM eclipse-temurin:21-jdk-alpine
+
+# Install required packages
+RUN apk add --no-cache curl
+
+# Set working directory
+WORKDIR /minecraft
+
+# Download Paper 1.21.10
+RUN curl -o paper.jar https://api.papermc.io/v2/projects/paper/versions/1.21.10/builds/86/downloads/paper-1.21.10-86.jar
+
+# Copy plugin
+COPY plugins/ ./plugins/
+
+# Create directories
+RUN mkdir -p world world_nether world_the_end logs
+
+# Copy configuration
+COPY server.properties ./
+COPY eula.txt ./
+
+# Railway environment
+ENV JAVA_OPTS="-Xmx2G -Xms1G"
+ENV PORT=25565
+
+# Expose port
+EXPOSE 25565
+
+# Railway working startup
+CMD ["sh", "-c", "echo '🚀 BlockCats Server Starting...' && java $JAVA_OPTS -jar paper.jar nogui"]

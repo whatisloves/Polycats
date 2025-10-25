@@ -138,6 +138,7 @@ export async function POST(request: Request) {
     // Extract child token ID from CatBred event
     const breedEvent = receipt.logs.find((log: any) => {
       try {
+        if (!contractWithSigner) return false;
         const parsed = contractWithSigner.interface.parseLog(log);
         return parsed?.name === 'CatBred';
       } catch {
@@ -149,7 +150,15 @@ export async function POST(request: Request) {
       throw new Error('CatBred event not found in transaction');
     }
 
+    if (!contractWithSigner) {
+      throw new Error('Contract not initialized');
+    }
+    
     const parsedEvent = contractWithSigner.interface.parseLog(breedEvent);
+    if (!parsedEvent) {
+      throw new Error('Failed to parse CatBred event');
+    }
+    
     const childTokenId = Number(parsedEvent.args.childId);
 
     console.log(`Child cat minted with tokenId: ${childTokenId}`);

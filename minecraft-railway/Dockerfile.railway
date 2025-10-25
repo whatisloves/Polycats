@@ -1,0 +1,5 @@
+# Railway deployment using Docker Hub Minecraft image
+FROM wapiozi/blockcats-minecraft:latest
+
+# Railway will use this image directly
+# No additional build steps needed

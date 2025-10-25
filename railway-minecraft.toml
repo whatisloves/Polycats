@@ -1,0 +1,15 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile.minecraft.railway"
+
+[deploy]
+startCommand = "java -Xmx2G -Xms1G -jar paper.jar nogui"
+healthcheckPath = "/"
+healthcheckTimeout = 100
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[environment]
+JAVA_OPTS = "-Xmx2G -Xms1G"
+SERVER_PORT = "25565"
+API_URL = "https://blockcats-production.up.railway.app"

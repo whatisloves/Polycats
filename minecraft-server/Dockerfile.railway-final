@@ -1,0 +1,33 @@
+# Railway Minecraft Server - FINAL WORKING VERSION
+# Based on Railway TCP proxy requirements
+
+FROM eclipse-temurin:21-jdk-alpine
+
+# Install required packages
+RUN apk add --no-cache curl
+
+# Set working directory
+WORKDIR /minecraft
+
+# Download Paper 1.21.10
+RUN curl -o paper.jar https://api.papermc.io/v2/projects/paper/versions/1.21.10/builds/86/downloads/paper-1.21.10-86.jar
+
+# Copy plugin
+COPY plugins/ ./plugins/
+
+# Create directories
+RUN mkdir -p world world_nether world_the_end logs
+
+# Copy configuration
+COPY server.properties ./
+COPY eula.txt ./
+
+# Railway environment - TCP proxy optimized
+ENV JAVA_OPTS="-Xmx2G -Xms1G"
+ENV PORT=25565
+
+# Expose port
+EXPOSE 25565
+
+# Railway startup - bind to all interfaces for TCP proxy
+CMD ["sh", "-c", "echo '🚀 BlockCats Server Starting on Railway...' && echo '📡 Port: $PORT' && echo '🌐 Binding to 0.0.0.0 for Railway TCP proxy' && java $JAVA_OPTS -Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false -jar paper.jar nogui --port $PORT --host 0.0.0.0"]
