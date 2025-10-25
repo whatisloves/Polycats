@@ -1,0 +1,34 @@
+#Minecraft server properties template for BlockCats development
+#Copy this to your minecraft-server directory and rename to server.properties
+
+# Basic server settings
+server-port=25565
+server-ip=
+motd=BlockCats Development Server
+
+# Game mode settings (IMPORTANT: Set to creative for development)
+gamemode=creative
+force-gamemode=true
+difficulty=easy
+
+# Player settings
+max-players=20
+online-mode=false
+white-list=false
+
+# World settings
+level-name=world
+level-type=minecraft:normal
+generate-structures=true
+spawn-protection=0
+
+# Performance settings
+view-distance=10
+simulation-distance=10
+max-tick-time=60000
+
+# Other settings
+enable-command-block=true
+allow-flight=true
+pvp=true
+allow-nether=true
