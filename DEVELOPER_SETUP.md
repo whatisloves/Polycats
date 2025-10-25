@@ -73,6 +73,7 @@ cp ../.env.example .env.local
 # Edit .env.local with your settings:
 # DEPLOYER_PRIVATE_KEY=your_private_key_here
 # POLYGON_AMOY_RPC_URL=https://rpc-amoy.polygon.technology
+# ETHERSCAN_API_KEY=your_etherscan_api_key
 # CONTRACT_ADDRESS=0xC585c0ee9eDe4f35dbA97513570f9351d2B634E9
 ```
 
