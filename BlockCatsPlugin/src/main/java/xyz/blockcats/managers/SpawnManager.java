@@ -45,14 +45,12 @@ public class SpawnManager {
         // Get main world
         final World world = Bukkit.getWorlds().get(0);
 
-        // Find spawn location (random near spawn point)
-        final Location spawn = world.getSpawnLocation();
-        final Location catLocation = new Location(
-            world,
-            spawn.getX() + random.nextInt(20) - 10,
-            world.getHighestBlockYAt(spawn) + 1,
-            spawn.getZ() + random.nextInt(20) - 10
-        );
+        // Find a safe spawn location
+        final Location catLocation = findSafeSpawnLocation(world);
+        if (catLocation == null) {
+            plugin.getLogger().warning("Could not find safe spawn location for BlockCat");
+            return null;
+        }
 
         // Spawn cat
         final Cat cat = (Cat) world.spawnEntity(catLocation, EntityType.CAT);
@@ -67,6 +65,66 @@ public class SpawnManager {
         plugin.getLogger().info("Spawned BlockCat at " + catLocation.getBlockX() + ", " + catLocation.getBlockY() + ", " + catLocation.getBlockZ());
 
         return cat;
+    }
+
+    private Location findSafeSpawnLocation(World world) {
+        final Location spawn = world.getSpawnLocation();
+        final int maxAttempts = 50; // Increased attempts
+        
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            // Try random locations around spawn with larger radius
+            final int x = spawn.getBlockX() + random.nextInt(100) - 50; // ±50 blocks from spawn
+            final int z = spawn.getBlockZ() + random.nextInt(100) - 50;
+            
+            // Get the highest safe Y coordinate at this location
+            final int y = world.getHighestBlockYAt(x, z);
+            
+            // Check if this location is safe
+            final Location testLocation = new Location(world, x, y, z);
+            if (isSafeLocation(testLocation)) {
+                plugin.getLogger().info("Found safe spawn location at " + x + ", " + y + ", " + z + " (attempt " + (attempt + 1) + ")");
+                return testLocation;
+            }
+        }
+        
+        // Fallback: try spawn location itself
+        final int spawnY = world.getHighestBlockYAt(spawn);
+        final Location fallbackLocation = new Location(world, spawn.getX(), spawnY, spawn.getZ());
+        if (isSafeLocation(fallbackLocation)) {
+            plugin.getLogger().info("Using fallback spawn location at " + spawn.getBlockX() + ", " + spawnY + ", " + spawn.getBlockZ());
+            return fallbackLocation;
+        }
+        
+        // Last resort: spawn at world spawn with some Y offset
+        plugin.getLogger().warning("No safe spawn found, using world spawn as last resort");
+        return new Location(world, spawn.getX(), spawnY + 2, spawn.getZ());
+    }
+
+    private boolean isSafeLocation(Location location) {
+        final World world = location.getWorld();
+        final int x = location.getBlockX();
+        final int y = location.getBlockY();
+        final int z = location.getBlockZ();
+        
+        // Check if the location is not in a solid block
+        if (world.getBlockAt(x, y, z).getType().isSolid()) {
+            return false;
+        }
+        
+        // Check if there's a solid block below (so the cat doesn't fall)
+        if (!world.getBlockAt(x, y - 1, z).getType().isSolid()) {
+            return false;
+        }
+        
+        // More lenient: only check if there's space above if it's a solid block
+        // Allow spawning even if there's a block above (cats can move)
+        if (world.getBlockAt(x, y + 1, z).getType().isSolid() && 
+            world.getBlockAt(x, y + 2, z).getType().isSolid()) {
+            // Only fail if there are 2 solid blocks above (suffocation risk)
+            return false;
+        }
+        
+        return true;
     }
 
     private void broadcastSpawnMessage(Location loc) {

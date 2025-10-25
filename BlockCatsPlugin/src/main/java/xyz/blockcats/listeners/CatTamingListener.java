@@ -78,6 +78,9 @@ public class CatTamingListener implements Listener {
                 // Add cat to player's collection (using placeholder values for now)
                 catCollectionManager.addCat(player, catName, "dna_placeholder", response.tokenId, "metadata_placeholder");
 
+                // Remove the cat from the world after successful claim
+                cat.remove();
+
                 final String message = plugin.getConfig().getString("messages.prefix") +
                         plugin.getConfig().getString("messages.claimed")
                         .replace("{id}", String.valueOf(response.tokenId));
