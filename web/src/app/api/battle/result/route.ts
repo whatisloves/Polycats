@@ -7,10 +7,10 @@ import {
   addCat,
   deleteCat,
   updateCatCooldown,
-  getNextTokenId,
 } from '@/lib/storage';
-import { breedCats, calculateRarityScore } from '@/lib/breeding';
+import { calculateRarityScore } from '@/lib/breeding';
 import { generateKyrgyzName } from '@/lib/nameGenerator';
+import { contractWithSigner, parseDNA, calculateRarityScoreFromDNA } from '@/lib/web3';
 
 const API_SECRET = process.env.API_SECRET || 'dev-secret-12345';
 
@@ -94,13 +94,6 @@ export async function POST(request: Request) {
       ? battle.challengerCatId
       : battle.challengedCatId;
 
-  // ===== BREED NEW CAT =====
-
-  // Calculate child stats using breeding algorithm
-  const childStats = breedCats(parent1, parent2);
-  const childGeneration = Math.max(parent1.generation, parent2.generation) + 1;
-  const childRarityScore = calculateRarityScore(childStats);
-
   // ===== CHECK WINNER'S INVENTORY (5 CAT LIMIT) =====
 
   const winnerCats = getCatsByOwner(winnerWallet);
@@ -121,64 +114,120 @@ export async function POST(request: Request) {
     );
   }
 
-  // ===== CREATE CHILD CAT =====
+  // ===== BREED NEW CAT ON BLOCKCHAIN =====
 
-  const nextTokenId = getNextTokenId();
-  const childName = generateKyrgyzName(childRarityScore, nextTokenId);
+  try {
+    if (!contractWithSigner) {
+      throw new Error('Contract signer not configured');
+    }
 
-  // Generate placeholder DNA string
-  const childDNA = `${Math.floor(Math.random() * 11)},${Math.floor(Math.random() * 16)},${childStats.speed},${childStats.luck},${childStats.strength},${childStats.regen},${childStats.defense}`;
+    console.log(`Breeding cats ${battle.challengerCatId} x ${battle.challengedCatId}...`);
 
-  const childCat = addCat({
-    owner: winnerWallet,
-    name: childName,
-    dna: childDNA,
-    stats: childStats,
-    generation: childGeneration,
-    isGenesis: false,
-    parent1Id: parent1.tokenId,
-    parent2Id: parent2.tokenId,
-    rarityScore: childRarityScore,
-    cooldownUntil: 0,
-    textureUrl: `https://api.dicebear.com/7.x/lorelei/png?seed=${nextTokenId}`,
-  });
+    // Call smart contract breedCats() function
+    const breedTx = await contractWithSigner.breedCats(
+      battle.challengerCatId,
+      battle.challengedCatId,
+      winnerWallet,
+      '' // Empty metadata URI (not using IPFS for demo)
+    );
 
-  // ===== SET LOSER'S CAT ON COOLDOWN (24 HOURS) =====
+    console.log('Waiting for transaction confirmation...');
+    const receipt = await breedTx.wait();
+    console.log('✅ Breed transaction confirmed:', receipt.hash);
 
-  const cooldownDuration = 24 * 60 * 60 * 1000; // 24 hours in ms
-  const cooldownUntil = Date.now() + cooldownDuration;
-  updateCatCooldown(loserCatId, cooldownUntil);
+    // Extract child token ID from CatBred event
+    const breedEvent = receipt.logs.find((log: any) => {
+      try {
+        const parsed = contractWithSigner.interface.parseLog(log);
+        return parsed?.name === 'CatBred';
+      } catch {
+        return false;
+      }
+    });
 
-  // ===== UPDATE BATTLE STATUS =====
+    if (!breedEvent) {
+      throw new Error('CatBred event not found in transaction');
+    }
 
-  updateBattle(body.battleId, {
-    state: 'COMPLETED',
-    endTime: Date.now(),
-    winner: winnerWallet,
-    loser: loserWallet,
-    reason: body.reason,
-    childTokenId: childCat.tokenId,
-    deletedCatId,
-  });
+    const parsedEvent = contractWithSigner.interface.parseLog(breedEvent);
+    const childTokenId = Number(parsedEvent.args.childId);
 
-  // ===== RETURN RESULT =====
+    console.log(`Child cat minted with tokenId: ${childTokenId}`);
 
-  return NextResponse.json({
-    success: true,
-    result: 'win',
-    childTokenId: childCat.tokenId,
-    childName: childCat.name,
-    childStats: childCat.stats,
-    childGeneration: childCat.generation,
-    childRarityScore: childCat.rarityScore,
-    deletedCatId,
-    deletedCatName: deletedCatId
-      ? winnerCats.find((c) => c.tokenId === deletedCatId)?.name
-      : null,
-    loserCatId,
-    cooldownUntil: new Date(cooldownUntil).toISOString(),
-    message: `${childName} was born! ${
-      deletedCatId ? '(Weakest cat auto-deleted)' : ''
-    }`,
-  });
+    // Read child data from blockchain (source of truth)
+    const childData = await contractWithSigner.getCat(childTokenId);
+    const childDNA = parseDNA(childData[0]);
+    const childRarityScore = calculateRarityScoreFromDNA(childDNA);
+    const childName = generateKyrgyzName(childRarityScore, childTokenId);
+
+    // Generate DNA string for storage
+    const dnaString = `${childDNA.variant},${childDNA.collarColor},${childDNA.speed},${childDNA.luck},${childDNA.strength},${childDNA.regen},${childDNA.defense}`;
+
+    // Store child in database (cache)
+    const childCat = addCat({
+      owner: winnerWallet,
+      name: childName,
+      dna: dnaString,
+      stats: {
+        speed: childDNA.speed,
+        strength: childDNA.strength,
+        defense: childDNA.defense,
+        regen: childDNA.regen,
+        luck: childDNA.luck,
+      },
+      generation: childDNA.generation,
+      isGenesis: false,
+      parent1Id: battle.challengerCatId,
+      parent2Id: battle.challengedCatId,
+      rarityScore: childRarityScore,
+      cooldownUntil: 0,
+      textureUrl: `https://api.dicebear.com/7.x/lorelei/png?seed=${childTokenId}`,
+    });
+
+    // ===== SET LOSER'S CAT ON COOLDOWN (24 HOURS) =====
+
+    const cooldownDuration = 24 * 60 * 60 * 1000; // 24 hours in ms
+    const cooldownUntil = Date.now() + cooldownDuration;
+    updateCatCooldown(loserCatId, cooldownUntil);
+
+    // ===== UPDATE BATTLE STATUS =====
+
+    updateBattle(body.battleId, {
+      state: 'COMPLETED',
+      endTime: Date.now(),
+      winner: winnerWallet,
+      loser: loserWallet,
+      reason: body.reason,
+      childTokenId: childCat.tokenId,
+      deletedCatId,
+    });
+
+    // ===== RETURN RESULT =====
+
+    return NextResponse.json({
+      success: true,
+      result: 'win',
+      childTokenId: childCat.tokenId,
+      childName: childCat.name,
+      childStats: childCat.stats,
+      childGeneration: childCat.generation,
+      childRarityScore: childCat.rarityScore,
+      deletedCatId,
+      deletedCatName: deletedCatId
+        ? winnerCats.find((c) => c.tokenId === deletedCatId)?.name
+        : null,
+      loserCatId,
+      cooldownUntil: new Date(cooldownUntil).toISOString(),
+      transactionHash: receipt.hash,
+      message: `${childName} was born! ${
+        deletedCatId ? '(Weakest cat auto-deleted)' : ''
+      }`,
+    });
+  } catch (error: any) {
+    console.error('Breeding error:', error);
+    return NextResponse.json({
+      success: false,
+      error: `Breeding failed: ${error.message}`,
+    });
+  }
 }

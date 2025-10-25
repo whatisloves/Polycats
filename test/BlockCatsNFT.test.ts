@@ -17,6 +17,8 @@ describe("BlockCatsNFT", function () {
     strength: 7,
     regen: 3,
     defense: 9,
+    generation: 0,
+    isGenesis: true,
   };
 
   const sampleSeed = ethers.randomBytes(32);
@@ -75,6 +77,8 @@ describe("BlockCatsNFT", function () {
       expect(catDna.strength).to.equal(sampleDNA.strength);
       expect(catDna.regen).to.equal(sampleDNA.regen);
       expect(catDna.defense).to.equal(sampleDNA.defense);
+      expect(catDna.generation).to.equal(sampleDNA.generation);
+      expect(catDna.isGenesis).to.equal(sampleDNA.isGenesis);
       expect(seed).to.equal(ethers.hexlify(sampleSeed));
     });
 

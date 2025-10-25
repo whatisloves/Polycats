@@ -5,6 +5,7 @@
   "scripts": {
     "test": "hardhat test",
     "compile": "hardhat compile",
+    "check-balance": "hardhat run scripts/checkBalance.ts --network polygonAmoy",
     "deploy:amoy": "hardhat run scripts/deploy.ts --network polygonAmoy",
     "verify": "hardhat verify --network polygonAmoy"
   },
