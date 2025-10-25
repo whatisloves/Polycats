@@ -10,18 +10,22 @@ import xyz.blockcats.BlockCatsPlugin;
 import xyz.blockcats.api.ApiClient;
 import xyz.blockcats.managers.SpawnManager;
 import xyz.blockcats.managers.WalletManager;
+import xyz.blockcats.managers.CatCollectionManager;
+import xyz.blockcats.utils.CatNameGenerator;
 
 public class CatTamingListener implements Listener {
 
     private final BlockCatsPlugin plugin;
     private final WalletManager walletManager;
     private final SpawnManager spawnManager;
+    private final CatCollectionManager catCollectionManager;
     private final ApiClient apiClient;
 
     public CatTamingListener(BlockCatsPlugin plugin) {
         this.plugin = plugin;
         this.walletManager = plugin.getWalletManager();
         this.spawnManager = plugin.getSpawnManager();
+        this.catCollectionManager = plugin.getCatCollectionManager();
         this.apiClient = plugin.getApiClient();
     }
 
@@ -43,7 +47,11 @@ public class CatTamingListener implements Listener {
         // Check if player has linked wallet
         if (!walletManager.hasWallet(player)) {
             player.sendMessage(plugin.getConfig().getString("messages.prefix") +
-                    plugin.getConfig().getString("messages.no-wallet"));
+                    plugin.getConfig().getString("messages.wallet-required"));
+            player.sendMessage(plugin.getConfig().getString("messages.prefix") +
+                    plugin.getConfig().getString("messages.wallet-help"));
+            player.sendMessage(plugin.getConfig().getString("messages.prefix") +
+                    plugin.getConfig().getString("messages.wallet-info"));
             event.setCancelled(true);
             return;
         }
@@ -54,6 +62,9 @@ public class CatTamingListener implements Listener {
         // Remove from pending claims
         spawnManager.removeBlockCat(cat);
 
+        // Generate unique cat name
+        final String catName = CatNameGenerator.generateCatName(catUuid);
+        
         // Call API to claim and mint NFT (async)
         apiClient.claimCat(wallet, catUuid).thenAccept(response -> {
             // Run in main thread for player messaging
@@ -64,11 +75,16 @@ public class CatTamingListener implements Listener {
                     return;
                 }
 
+                // Add cat to player's collection (using placeholder values for now)
+                catCollectionManager.addCat(player, catName, "dna_placeholder", response.tokenId, "metadata_placeholder");
+
                 final String message = plugin.getConfig().getString("messages.prefix") +
                         plugin.getConfig().getString("messages.claimed")
                         .replace("{id}", String.valueOf(response.tokenId));
 
                 player.sendMessage(message);
+                player.sendMessage("§7Your new cat: §6" + catName);
+                player.sendMessage("§7Use /mycats to see your collection");
                 player.sendMessage("§7TX: " + response.transactionHash);
             });
         });

@@ -7,18 +7,48 @@ description: BlockCats NFT integration for Minecraft
 
 commands:
   linkwallet:
-    description: Link your wallet address
+    description: Link your wallet address to receive BlockCat NFTs
     usage: /linkwallet <address>
     permission: blockcats.link
+  unlinkwallet:
+    description: Unlink your current wallet address
+    usage: /unlinkwallet
+    permission: blockcats.link
+  status:
+    description: Check your wallet status and BlockCats info
+    usage: /status
+    permission: blockcats.use
   spawncat:
     description: Manually spawn a BlockCat for testing
     usage: /spawncat
     permission: blockcats.spawn
+  bcadmin:
+    description: BlockCats admin commands
+    usage: /bcadmin <reload|spawn|status|players|help>
+    permission: blockcats.admin
+  help:
+    description: Show BlockCats help and commands
+    usage: /help
+    permission: blockcats.use
+  mycats:
+    description: View your collected cats
+    usage: /mycats
+    permission: blockcats.use
+  choosecat:
+    description: Choose your active cat
+    usage: /choosecat <name>
+    permission: blockcats.use
 
 permissions:
   blockcats.link:
-    description: Allow linking wallet
+    description: Allow linking/unlinking wallet
+    default: true
+  blockcats.use:
+    description: Allow using BlockCats commands
     default: true
   blockcats.spawn:
     description: Allow manual cat spawning
+    default: op
+  blockcats.admin:
+    description: Allow admin commands
     default: op

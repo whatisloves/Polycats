@@ -57,8 +57,9 @@ public class SpawnManager {
         // Spawn cat
         final Cat cat = (Cat) world.spawnEntity(catLocation, EntityType.CAT);
         cat.setTamed(false);
-        cat.setCustomName("§6BlockCat");
+        cat.setCustomName("§6⛓️ BlockCat §7(Wallet Required)");
         cat.setCustomNameVisible(true);
+        cat.setGlowing(true); // Make it glow to show it's special
 
         // Track as BlockCat
         blockCats.add(cat.getUniqueId());
@@ -75,7 +76,11 @@ public class SpawnManager {
                 .replace("{y}", String.valueOf(loc.getBlockY()))
                 .replace("{z}", String.valueOf(loc.getBlockZ()));
 
+        final String walletReminder = plugin.getConfig().getString("messages.prefix") +
+                plugin.getConfig().getString("messages.spawn-wallet-reminder");
+
         Bukkit.broadcastMessage(message);
+        Bukkit.broadcastMessage(walletReminder);
     }
 
     public boolean isBlockCat(Cat cat) {

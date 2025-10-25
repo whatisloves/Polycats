@@ -68,4 +68,13 @@ public class WalletManager {
     public boolean hasWallet(Player player) {
         return wallets.containsKey(player.getUniqueId());
     }
+
+    public void unlinkWallet(Player player) {
+        wallets.remove(player.getUniqueId());
+        saveWallets();
+    }
+
+    public int getLinkedWalletCount() {
+        return wallets.size();
+    }
 }

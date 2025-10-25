@@ -3,11 +3,19 @@ package xyz.blockcats;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import xyz.blockcats.commands.LinkWalletCommand;
+import xyz.blockcats.commands.UnlinkWalletCommand;
+import xyz.blockcats.commands.StatusCommand;
 import xyz.blockcats.commands.SpawnCatCommand;
+import xyz.blockcats.commands.BlockCatsAdminCommand;
+import xyz.blockcats.commands.HelpCommand;
+import xyz.blockcats.commands.MyCatsCommand;
+import xyz.blockcats.commands.ChooseCatCommand;
 import xyz.blockcats.listeners.CatTamingListener;
+import xyz.blockcats.listeners.PlayerQuitListener;
 import xyz.blockcats.api.ApiClient;
 import xyz.blockcats.managers.WalletManager;
 import xyz.blockcats.managers.SpawnManager;
+import xyz.blockcats.managers.CatCollectionManager;
 
 import java.util.logging.Logger;
 
@@ -17,6 +25,7 @@ public class BlockCatsPlugin extends JavaPlugin {
     private ApiClient apiClient;
     private WalletManager walletManager;
     private SpawnManager spawnManager;
+    private CatCollectionManager catCollectionManager;
     private Logger log;
 
     @Override
@@ -31,14 +40,24 @@ public class BlockCatsPlugin extends JavaPlugin {
         apiClient = new ApiClient(this);
         walletManager = new WalletManager(this);
         spawnManager = new SpawnManager(this);
+        catCollectionManager = new CatCollectionManager(this);
 
         // Register commands
         getCommand("linkwallet").setExecutor(new LinkWalletCommand(this));
+        getCommand("unlinkwallet").setExecutor(new UnlinkWalletCommand(this));
+        getCommand("status").setExecutor(new StatusCommand(this));
         getCommand("spawncat").setExecutor(new SpawnCatCommand(this));
+        getCommand("bcadmin").setExecutor(new BlockCatsAdminCommand(this));
+        getCommand("help").setExecutor(new HelpCommand(this));
+        getCommand("mycats").setExecutor(new MyCatsCommand(this));
+        getCommand("choosecat").setExecutor(new ChooseCatCommand(this));
 
         // Register event listeners
         getServer().getPluginManager().registerEvents(
             new CatTamingListener(this), this
+        );
+        getServer().getPluginManager().registerEvents(
+            new PlayerQuitListener(this), this
         );
 
         // Start spawn scheduler
@@ -86,5 +105,9 @@ public class BlockCatsPlugin extends JavaPlugin {
 
     public SpawnManager getSpawnManager() {
         return spawnManager;
+    }
+
+    public CatCollectionManager getCatCollectionManager() {
+        return catCollectionManager;
     }
 }
