@@ -38,6 +38,26 @@ commands:
     description: Choose your active cat
     usage: /choosecat <name>
     permission: blockcats.use
+  challenge:
+    description: Challenge another player to a breeding battle
+    usage: /challenge <player> breeding
+    permission: blockcats.use
+  accept:
+    description: Accept a pending breeding battle challenge
+    usage: /accept
+    permission: blockcats.use
+  decline:
+    description: Decline a pending breeding battle challenge
+    usage: /decline
+    permission: blockcats.use
+  deletecat:
+    description: Delete a cat from your collection
+    usage: /deletecat <name>
+    permission: blockcats.use
+  confirmdelete:
+    description: Confirm deletion of a cat
+    usage: /confirmdelete
+    permission: blockcats.use
 
 permissions:
   blockcats.link:

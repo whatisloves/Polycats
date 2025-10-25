@@ -59,14 +59,21 @@ public class CatTamingListener implements Listener {
         final String wallet = walletManager.getWallet(player);
         final String catUuid = cat.getUniqueId().toString();
 
+        // Get cat DNA from spawn manager
+        final String dna = spawnManager.getCatDNA(cat);
+        if (dna == null) {
+            player.sendMessage("§cError: Cat DNA not found");
+            return;
+        }
+
         // Remove from pending claims
         spawnManager.removeBlockCat(cat);
 
         // Generate unique cat name
         final String catName = CatNameGenerator.generateCatName(catUuid);
-        
+
         // Call API to claim and mint NFT (async)
-        apiClient.claimCat(wallet, catUuid).thenAccept(response -> {
+        apiClient.claimCat(wallet, catUuid, dna).thenAccept(response -> {
             // Run in main thread for player messaging
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (response == null || !response.success) {

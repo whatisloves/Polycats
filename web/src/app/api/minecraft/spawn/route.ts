@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { generateRandomStats } from '@/lib/breeding';
+
+const API_SECRET = process.env.API_SECRET || 'dev-secret-12345';
 
 export async function POST(request: NextRequest) {
   try {
     // Check for the plugin secret header
     const secret = request.headers.get('X-Plugin-Secret');
-    const expectedSecret = 'dev-secret-12345';
-    
-    if (secret !== expectedSecret) {
+
+    if (secret !== API_SECRET) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -25,14 +27,12 @@ export async function POST(request: NextRequest) {
 }
 
 function generateRandomDNA(): string {
-  // Generate a simple random DNA string for testing
+  // Generate random DNA string for genesis cats (stats 1-5)
   const variant = Math.floor(Math.random() * 11); // 0-10 (11 vanilla cat types)
   const collarColor = Math.floor(Math.random() * 16); // 0-15 (16 dye colors)
-  const speed = Math.floor(Math.random() * 10) + 1; // 1-10
-  const luck = Math.floor(Math.random() * 10) + 1; // 1-10
-  const strength = Math.floor(Math.random() * 10) + 1; // 1-10
-  const regen = Math.floor(Math.random() * 10) + 1; // 1-10
-  const defense = Math.floor(Math.random() * 10) + 1; // 1-10
 
-  return `${variant},${collarColor},${speed},${luck},${strength},${regen},${defense}`;
+  // Use breeding utility for genesis stats (1-5 range)
+  const stats = generateRandomStats(1, 5);
+
+  return `${variant},${collarColor},${stats.speed},${stats.luck},${stats.strength},${stats.regen},${stats.defense}`;
 }

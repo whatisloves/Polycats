@@ -17,6 +17,7 @@ public class SpawnManager {
 
     private final BlockCatsPlugin plugin;
     private final Set<UUID> blockCats = new HashSet<>();
+    private final java.util.HashMap<UUID, String> catDNA = new java.util.HashMap<>();
     private final Random random = new Random();
 
     public SpawnManager(BlockCatsPlugin plugin) {
@@ -59,10 +60,11 @@ public class SpawnManager {
         cat.setCustomNameVisible(true);
         cat.setGlowing(true); // Make it glow to show it's special
 
-        // Track as BlockCat
+        // Track as BlockCat and store DNA
         blockCats.add(cat.getUniqueId());
+        catDNA.put(cat.getUniqueId(), dna);
 
-        plugin.getLogger().info("Spawned BlockCat at " + catLocation.getBlockX() + ", " + catLocation.getBlockY() + ", " + catLocation.getBlockZ());
+        plugin.getLogger().info("Spawned BlockCat at " + catLocation.getBlockX() + ", " + catLocation.getBlockY() + ", " + catLocation.getBlockZ() + " with DNA: " + dna);
 
         return cat;
     }
@@ -145,7 +147,12 @@ public class SpawnManager {
         return blockCats.contains(cat.getUniqueId());
     }
 
+    public String getCatDNA(Cat cat) {
+        return catDNA.get(cat.getUniqueId());
+    }
+
     public void removeBlockCat(Cat cat) {
         blockCats.remove(cat.getUniqueId());
+        catDNA.remove(cat.getUniqueId());
     }
 }

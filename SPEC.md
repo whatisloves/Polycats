@@ -1,5 +1,48 @@
 # BlockCats - Technical Specification
 
+---
+
+## 🚦 CURRENT IMPLEMENTATION STATUS (October 25, 2025)
+
+### ✅ COMPLETED (Ready to Use)
+- **Smart Contract** - 100% Complete
+  - Deployed: `0xC585c0ee9eDe4f35dbA97513570f9351d2B634E9`
+  - Network: Polygon Amoy Testnet
+  - Tests: 13/13 passing ✅
+  - Documentation: Full
+
+- **Deployment Infrastructure** - 100% Complete
+  - Hardhat configured
+  - Scripts working
+  - Name generator tested
+
+### 🟡 PARTIALLY COMPLETE (Needs Integration)
+- **Minecraft Plugin** - 50% Complete
+  - ✅ Compiled JAR (3.3MB)
+  - ✅ All Java code complete
+  - ❌ Not connected to real blockchain
+  - ❌ Needs testing on server
+
+- **Backend API** - 30% Complete
+  - ✅ API routes created
+  - ✅ Mock implementation working
+  - ❌ No real smart contract calls
+  - ❌ No IPFS integration
+  - ❌ No web3 libraries installed
+
+### 🔴 NOT STARTED
+- **Frontend Gallery** - 10% Complete
+  - ✅ Basic Next.js scaffolding
+  - ❌ No wallet connection
+  - ❌ No NFT display
+  - ❌ No blockchain reads
+
+**Overall Completion:** ~58%
+**Time to Complete:** 6-8 hours remaining
+**See:** `PROJECT_STATUS.md` for detailed breakdown
+
+---
+
 ## Project Overview
 
 **BlockCats** is a Web3 gaming project that integrates Minecraft gameplay with blockchain technology. It creates a living, server-controlled collection of unique cats that exist both in-game and as NFTs on the Polygon Amoy testnet.
@@ -123,93 +166,192 @@ Unlike traditional NFT breeding games, BlockCats prevents economic exploitation 
 
 ## Game Mechanics
 
-### 1. Kitten Spawn System
+### 1. Cat Types and Stats
 
-**"Kitten Time" Event Flow:**
+**Genesis Cats (Gen 0):**
+- Spawn naturally on the server timer (every 1-30 minutes configurable)
+- Random stats: 1-5 range (Speed, Strength, Health, Luck)
+- Can be killed/die in-game
+- Weak baseline stats
+- First cats available to players
 
-1. Server triggers spawn event every `N` minutes (configurable)
-2. Server randomly selects 2 adult cats from the existing population
-3. Generates unique kitten with procedurally generated texture and DNA
-4. Broadcasts server-wide message: *"A new BlockCat was born at coordinates [X, Y, Z]! Be the first to tame it!"*
-5. Kitten spawns as a wild (untamed) entity at specified location
-6. First player to tame the kitten becomes the NFT owner
+**Bred Cats (Gen 1+):**
+- Created through PvP breeding battles
+- Inherited stats from both parents (1-10 range)
+- **IMMORTAL** - cannot die
+- Stronger stats via breeding algorithm
+- Progressive improvement (~8 generations to reach max)
+
+**Cat Stats → Player Buffs:**
+Stats determine what potion effects the active cat gives to its owner:
+
+- **Speed** (1-10):
+  - 1-6: Speed I
+  - 7-9: Speed II
+  - 10: Speed II + Jump Boost I
+- **Strength** (1-10):
+  - 1-6: Strength I
+  - 7-9: Strength II
+  - 10: Strength II + Resistance I
+- **Health** (1-10):
+  - 1-6: Regeneration I (every 10s)
+  - 7-9: Regeneration II (every 5s) + Health Boost I (+2 hearts)
+  - 10: Regeneration III + Health Boost II (+4 hearts)
+- **Luck** (1-10):
+  - 1-6: Luck I
+  - 7-9: Luck II
+  - 10: Luck II + Night Vision
+
+### 2. Genesis Cat Spawn System
+
+**Spawn Flow:**
+1. Server triggers spawn event every `N` minutes (configurable, default: 1 min for testing)
+2. Server generates random DNA (stats 1-5)
+3. Cat spawns at random safe location near spawn point
+4. Broadcasts: *"A new BlockCat appeared at [X, Y, Z]! Wallet required to claim!"*
+5. First player to tame (right-click with fish) claims it
 
 **Spawn Conditions:**
-- Requires at least 2 adult cats in the world (initial cats are seeded)
-- Must not exceed daily global limit
-- Spawn timer resets after each successful kitten spawn
+- Global daily limit: 10 cats/day (configurable)
+- Per-player daily limit: 1 claim/day
+- Player must have linked wallet
 
-### 2. Taming Mechanism
+### 3. Cat Inventory System
 
-- Kitten spawns as wild/untamed entity
-- Player must use Minecraft's standard taming method (fish)
-- First player to successfully tame triggers:
-  - Wallet ownership assignment
-  - NFT minting transaction
-  - On-chain metadata recording
+**Inventory Rules:**
+- Each player can own up to 5 cats
+- 1 active cat (gives buffs)
+- 4 stored cats (inactive)
+- If inventory full when breeding winner gets new cat:
+  - Weakest cat (lowest total stats) auto-deleted
+  - New cat takes its place
+- Cannot start battle if inventory full
 
-### 3. Cat Lifecycle
+**Commands:**
+- `/mycats` - View your collection
+- `/choosecat <name>` - Set active cat (despawns previous, spawns new one)
 
-- **Kitten** (0-20 minutes): Can be claimed as NFT if tamed
-- **Adult** (20+ minutes): Can be selected as parent for breeding
-- Cats persist in-game indefinitely (no death/despawn)
+### 4. PvP Breeding Battle System
+
+**Battle Flow:**
+1. Player A challenges Player B: `/challenge <player>`
+2. Both must have active cats (not on cooldown)
+3. Both must accept the battle
+4. System creates battle arena or teleports players
+5. **Players fight each other** (Minecraft PvP combat)
+6. Battle ends when:
+   - One player dies → They lose
+   - One player quits/disconnects → They lose
+   - 5 minute timer expires → Draw (no breed)
+
+**Battle Outcomes:**
+- **Winner**: Gets bred kitten (offspring of both active cats), NFT minted
+- **Loser**:
+  - Keeps their cat (cat doesn't die)
+  - Cat gets 24-hour breeding cooldown
+  - Can still use cat for buffs
+- **Draw**: No breeding occurs, no cooldown
+
+**Breeding Requirements:**
+- Both players must have active cats
+- Neither cat can be on cooldown
+- Both players must not have full inventory (or willing to lose weakest cat)
+- Both players must accept battle
+
+### 5. Breeding Algorithm
+
+**Deterministic Stat Inheritance:**
+```solidity
+function breedStat(
+    uint256 parent1Id, uint256 parent2Id,
+    uint8 parent1Stat, uint8 parent2Stat,
+    uint8 statIndex,
+    uint8 parent1Generation, uint8 parent2Generation
+) internal pure returns (uint8) {
+    // 1. Average of both parents
+    uint8 baseValue = (parent1Stat + parent2Stat) / 2;
+
+    // 2. Deterministic mutation (75% positive bias)
+    uint256 seed = uint256(keccak256(abi.encode(parent1Id, parent2Id, statIndex)));
+    uint256 roll = seed % 100;
+
+    int8 mutation = 0;
+    if (roll < 5) mutation = -1;       // 5% chance: -1
+    else if (roll < 25) mutation = 0;   // 20% chance: +0
+    else if (roll < 65) mutation = 1;   // 40% chance: +1
+    else mutation = 2;                  // 35% chance: +2
+
+    // 3. Generational bonus (max parent gen / 2)
+    uint8 maxGen = parent1Generation > parent2Generation ? parent1Generation : parent2Generation;
+    uint8 generationalBonus = maxGen / 2;
+
+    // 4. Calculate final stat
+    int16 result = int16(int8(baseValue)) + int16(mutation) + int16(generationalBonus);
+
+    // 5. Clamp to 1-10
+    if (result < 1) return 1;
+    if (result > 10) return 10;
+    return uint8(uint16(result));
+}
+```
+
+**Progression Example:**
+- Gen 0: Stats 1-5 (genesis)
+- Gen 1: Stats 2-6 (bred from Gen 0)
+- Gen 3: Stats 4-8
+- Gen 5: Stats 6-9
+- Gen 8+: Stats 8-10 (max achievable)
 
 ---
 
 ## Anti-Abuse Rules
 
-### Rule #1: Server-Controlled Spawning
+### Rule #1: Skill-Based Breeding
 
 **Problem Prevented:** Infinite breeding loops and NFT farming
 
 **Implementation:**
-- No player-facing "breed" button/command
-- Spawning logic exists only in server-side code
-- Players cannot manually trigger kitten generation
-- Parents are randomly selected by server algorithm
+- Breeding requires PvP battle (skill-based, not free)
+- Players must fight each other to breed cats
+- Losing battles = 24h cooldown (rate limiting)
+- Cannot spam breeding without winning battles
 
-```typescript
-// Player CANNOT trigger this
-function spawnBlockCat() {
-  if (dailyKittenCount >= MAX_KITTENS_PER_DAY) return;
+**Economic Balance:**
+- Better cats = better buffs = competitive advantage
+- Creates natural skill-based progression
+- Rewards better players without allowing infinite breeding
 
-  const parents = selectRandomParents();
-  const kitten = generateKitten(parents);
-  spawnInWorld(kitten);
-  broadcastKittenEvent(kitten);
-}
-```
-
-### Rule #2: Global Daily Limit
+### Rule #2: Global Daily Genesis Spawn Limit
 
 **Problem Prevented:** Server-wide spam and devaluation
 
 **Configuration:**
 ```typescript
-const MAX_KITTENS_PER_DAY = 10;
+const MAX_GENESIS_SPAWNS_PER_DAY = 10;
 ```
 
 **Implementation:**
+- Applies only to Genesis cats (Gen 0)
+- Bred cats have no spawn limit (earned through battle)
 - Counter resets at midnight UTC
-- After limit reached, no more spawns until next day
 - Counter persists across server restarts
 
 **Database Schema:**
 ```typescript
 interface DailySpawnTracker {
   date: string; // YYYY-MM-DD
-  spawnCount: number;
+  genesisSpawnCount: number;
   lastSpawnTimestamp: number;
 }
 ```
 
-### Rule #3: Per-Player Daily Claim Limit
+### Rule #3: Per-Player Daily Genesis Claim Limit
 
-**Problem Prevented:** Single player monopolizing all spawns
+**Problem Prevented:** Single player monopolizing all genesis spawns
 
 **Configuration:**
 ```typescript
-const MAX_CLAIMS_PER_PLAYER_PER_DAY = 1;
+const MAX_GENESIS_CLAIMS_PER_PLAYER_PER_DAY = 1;
 ```
 
 **Implementation:**
@@ -217,44 +359,97 @@ const MAX_CLAIMS_PER_PLAYER_PER_DAY = 1;
 interface PlayerClaimTracker {
   playerWallet: string;
   date: string;
-  claimsToday: number;
+  genesisClaimsToday: number;
 }
 
-function onKittenTamed(player: Player, kitten: Cat) {
-  const claims = getPlayerClaimsToday(player.wallet);
+function onGenesisCatTamed(player: Player, cat: Cat) {
+  const claims = getPlayerGenesisClaimsToday(player.wallet);
 
-  if (claims >= MAX_CLAIMS_PER_PLAYER_PER_DAY) {
-    // Player can still tame in-game, but no NFT minted
-    notifyPlayer(player, "You've already claimed your daily BlockCat NFT!");
+  if (claims >= MAX_GENESIS_CLAIMS_PER_PLAYER_PER_DAY) {
+    notifyPlayer(player, "You already claimed your daily Genesis BlockCat!");
+    event.setCancelled(true);
     return;
   }
 
   // Proceed with NFT minting
-  mintNFT(player.wallet, kitten);
+  mintGenesisCat(player.wallet, cat);
   incrementPlayerClaims(player.wallet);
 }
 ```
 
-### Rule #4: First-To-Tame Ownership
+### Rule #4: Battle Cooldown System
 
-**Problem Prevented:** Ownership disputes
+**Problem Prevented:** Spam breeding
 
 **Implementation:**
-- Kitten spawns with `owner = null`
-- First successful tame action sets `owner = player.wallet`
-- Immediate on-chain minting (no delays or auctions)
+- Losing cat gets 24-hour breeding cooldown
+- Cat can still be used for buffs during cooldown
+- Cannot start battle with cat on cooldown
+- Prevents rapid-fire breeding attempts
+
+```typescript
+interface CatCooldown {
+  tokenId: number;
+  cooldownUntil: number; // Unix timestamp
+}
+
+function canBattle(cat: Cat): boolean {
+  const cooldown = getCatCooldown(cat.tokenId);
+  return !cooldown || Date.now() > cooldown.cooldownUntil;
+}
+```
+
+### Rule #5: Inventory Cap (5 Cats Max)
+
+**Problem Prevented:** Hoarding and accumulation abuse
+
+**Implementation:**
+- Max 5 cats per player (1 active + 4 stored)
+- Weakest cat auto-deleted if winner's inventory full
+- Cannot start battle if inventory full
+- Creates strategic decisions about which cats to keep
+
+**Auto-Delete Logic:**
+```typescript
+function addCatToInventory(player: Player, newCat: Cat) {
+  const inventory = getPlayerCats(player.wallet);
+
+  if (inventory.length >= 5) {
+    // Find weakest cat (lowest total stats)
+    const weakestCat = inventory.reduce((min, cat) =>
+      getTotalStats(cat) < getTotalStats(min) ? cat : min
+    );
+
+    // Delete weakest cat
+    deleteCat(weakestCat.tokenId);
+    inventory.splice(inventory.indexOf(weakestCat), 1);
+  }
+
+  inventory.push(newCat);
+}
+```
+
+### Rule #6: First-To-Tame Genesis Ownership
+
+**Problem Prevented:** Ownership disputes for genesis cats
+
+**Implementation:**
+- Genesis cat spawns with `owner = null`
+- First successful tame sets `owner = player.wallet`
+- Immediate on-chain minting
 - No ownership transfers after minting (marketplace only)
 
-### Rule #5: Non-Financial NFTs
+### Rule #7: Non-Financial NFTs
 
 **Problem Prevented:** Gambling/ponzi mechanics
 
 **Design Principles:**
-- NFTs are collectibles, not yield-bearing assets
+- NFTs provide in-game buffs (gameplay value)
 - No $CAT token
 - No staking rewards
-- No breeding fees
+- No breeding fees (free to battle)
 - No in-game currency generation
+- Pure skill-based competition
 
 ---
 
@@ -353,56 +548,181 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract BlockCatsNFT is ERC721, ERC721URIStorage, Ownable {
     uint256 private _nextTokenId;
 
-    // Mapping from tokenId to cat DNA
-    mapping(uint256 => string) public catDNA;
+    struct CatStats {
+        uint8 speed;      // 1-10
+        uint8 strength;   // 1-10
+        uint8 health;     // 1-10
+        uint8 luck;       // 1-10
+    }
 
-    // Mapping from tokenId to birth timestamp
-    mapping(uint256 => uint256) public birthTimestamp;
+    struct CatData {
+        string name;              // Kyrgyz name
+        CatStats stats;
+        uint8 generation;         // 0 = Genesis, 1+ = Bred
+        uint256 parent1Id;        // 0 if Genesis
+        uint256 parent2Id;        // 0 if Genesis
+        uint256 birthTimestamp;
+        bool isImmortal;          // false for Gen 0, true for Gen 1+
+    }
 
-    // Mapping from tokenId to parent IDs
-    mapping(uint256 => uint256[2]) public parents;
+    // Token ID => Cat Data
+    mapping(uint256 => CatData) public cats;
+
+    // Breeding cooldowns (token ID => cooldown end timestamp)
+    mapping(uint256 => uint256) public breedingCooldowns;
 
     event CatMinted(
         uint256 indexed tokenId,
         address indexed owner,
-        string dna,
-        uint256[2] parents
+        string name,
+        uint8 generation,
+        uint256 parent1Id,
+        uint256 parent2Id
+    );
+
+    event CatBred(
+        uint256 indexed newTokenId,
+        uint256 indexed parent1Id,
+        uint256 indexed parent2Id,
+        address winner
     );
 
     constructor() ERC721("BlockCats", "BCAT") Ownable(msg.sender) {}
 
-    function mintCat(
+    // Mint Genesis cat (Gen 0, random stats 1-5)
+    function mintGenesisCat(
         address to,
-        string memory _dna,
+        string memory name,
         string memory metadataURI,
-        uint256[2] memory _parents
+        uint8[4] memory stats  // [speed, strength, health, luck]
     ) public onlyOwner returns (uint256) {
         uint256 tokenId = _nextTokenId++;
 
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, metadataURI);
 
-        catDNA[tokenId] = _dna;
-        birthTimestamp[tokenId] = block.timestamp;
-        parents[tokenId] = _parents;
+        cats[tokenId] = CatData({
+            name: name,
+            stats: CatStats({
+                speed: stats[0],
+                strength: stats[1],
+                health: stats[2],
+                luck: stats[3]
+            }),
+            generation: 0,
+            parent1Id: 0,
+            parent2Id: 0,
+            birthTimestamp: block.timestamp,
+            isImmortal: false
+        });
 
-        emit CatMinted(tokenId, to, _dna, _parents);
+        emit CatMinted(tokenId, to, name, 0, 0, 0);
 
         return tokenId;
     }
 
-    function getCatInfo(uint256 tokenId) public view returns (
-        string memory dna,
-        uint256 birth,
-        uint256[2] memory parentIds,
-        string memory uri
-    ) {
-        return (
-            catDNA[tokenId],
-            birthTimestamp[tokenId],
-            parents[tokenId],
-            tokenURI(tokenId)
-        );
+    // Breed two cats (called by backend after PvP battle)
+    function breedCats(
+        address winner,
+        uint256 parent1Id,
+        uint256 parent2Id,
+        string memory name,
+        string memory metadataURI
+    ) public onlyOwner returns (uint256) {
+        require(_ownerOf(parent1Id) != address(0), "Parent 1 does not exist");
+        require(_ownerOf(parent2Id) != address(0), "Parent 2 does not exist");
+
+        CatData memory parent1 = cats[parent1Id];
+        CatData memory parent2 = cats[parent2Id];
+
+        // Calculate offspring stats using breeding algorithm
+        uint8[4] memory childStats;
+        childStats[0] = breedStat(parent1Id, parent2Id, parent1.stats.speed, parent2.stats.speed, 0, parent1.generation, parent2.generation);
+        childStats[1] = breedStat(parent1Id, parent2Id, parent1.stats.strength, parent2.stats.strength, 1, parent1.generation, parent2.generation);
+        childStats[2] = breedStat(parent1Id, parent2Id, parent1.stats.health, parent2.stats.health, 2, parent1.generation, parent2.generation);
+        childStats[3] = breedStat(parent1Id, parent2Id, parent1.stats.luck, parent2.stats.luck, 3, parent1.generation, parent2.generation);
+
+        uint256 tokenId = _nextTokenId++;
+        uint8 childGeneration = (parent1.generation > parent2.generation ? parent1.generation : parent2.generation) + 1;
+
+        _safeMint(winner, tokenId);
+        _setTokenURI(tokenId, metadataURI);
+
+        cats[tokenId] = CatData({
+            name: name,
+            stats: CatStats({
+                speed: childStats[0],
+                strength: childStats[1],
+                health: childStats[2],
+                luck: childStats[3]
+            }),
+            generation: childGeneration,
+            parent1Id: parent1Id,
+            parent2Id: parent2Id,
+            birthTimestamp: block.timestamp,
+            isImmortal: true  // Bred cats are immortal
+        });
+
+        emit CatBred(tokenId, parent1Id, parent2Id, winner);
+        emit CatMinted(tokenId, winner, name, childGeneration, parent1Id, parent2Id);
+
+        return tokenId;
+    }
+
+    // Deterministic breeding algorithm
+    function breedStat(
+        uint256 parent1Id,
+        uint256 parent2Id,
+        uint8 parent1Stat,
+        uint8 parent2Stat,
+        uint8 statIndex,
+        uint8 parent1Generation,
+        uint8 parent2Generation
+    ) internal pure returns (uint8) {
+        // 1. Average of both parents
+        uint8 baseValue = (parent1Stat + parent2Stat) / 2;
+
+        // 2. Deterministic mutation
+        uint256 seed = uint256(keccak256(abi.encode(parent1Id, parent2Id, statIndex)));
+        uint256 roll = seed % 100;
+
+        int8 mutation = 0;
+        if (roll < 5) mutation = -1;       // 5% chance: -1
+        else if (roll < 25) mutation = 0;   // 20% chance: +0
+        else if (roll < 65) mutation = 1;   // 40% chance: +1
+        else mutation = 2;                  // 35% chance: +2
+
+        // 3. Generational bonus
+        uint8 maxGen = parent1Generation > parent2Generation ? parent1Generation : parent2Generation;
+        uint8 generationalBonus = maxGen / 2;
+
+        // 4. Calculate final stat
+        int16 result = int16(int8(baseValue)) + int16(mutation) + int16(generationalBonus);
+
+        // 5. Clamp to 1-10
+        if (result < 1) return 1;
+        if (result > 10) return 10;
+        return uint8(uint16(result));
+    }
+
+    // Set breeding cooldown (called by backend after battle)
+    function setCooldown(uint256 tokenId, uint256 cooldownSeconds) public onlyOwner {
+        breedingCooldowns[tokenId] = block.timestamp + cooldownSeconds;
+    }
+
+    // Check if cat can breed
+    function canBreed(uint256 tokenId) public view returns (bool) {
+        return block.timestamp >= breedingCooldowns[tokenId];
+    }
+
+    // Get cat stats
+    function getCatStats(uint256 tokenId) public view returns (CatStats memory) {
+        return cats[tokenId].stats;
+    }
+
+    // Get full cat data
+    function getCatData(uint256 tokenId) public view returns (CatData memory) {
+        return cats[tokenId];
     }
 
     // Override required by Solidity
@@ -428,39 +748,42 @@ contract BlockCatsNFT is ERC721, ERC721URIStorage, Ownable {
 
 ### Key Contract Features
 
-1. **DNA Storage**: Each cat has immutable DNA string
-2. **Lineage Tracking**: Parent IDs stored on-chain
-3. **Birth Timestamp**: Used for age calculations
-4. **Metadata URI**: Points to IPFS metadata JSON
-5. **Owner-Only Minting**: Only backend can mint (security)
+1. **Cat Stats System**: 4 stats (Speed, Strength, Health, Luck) range 1-10
+2. **Generation Tracking**: Gen 0 (Genesis) vs Gen 1+ (Bred)
+3. **Immortality Flag**: Bred cats cannot die in-game
+4. **Deterministic Breeding**: Hash-based algorithm with 75% positive mutation bias
+5. **Generational Bonus**: Progressive improvement over generations
+6. **Breeding Cooldowns**: On-chain cooldown tracking (24 hours for losers)
+7. **Parent Lineage**: Full ancestry tracking for all bred cats
+8. **Kyrgyz Names**: On-chain name storage
+9. **Owner-Only Minting**: Only backend can mint (security)
 
 ---
 
 ## Data Models
 
-### Cat DNA Structure
+### Cat Stats Structure
 
 ```typescript
-interface CatDNA {
-  // Visual traits
-  primaryColor: string;      // hex color
-  secondaryColor: string;    // hex color
-  pattern: 'solid' | 'striped' | 'spotted' | 'calico' | 'tuxedo';
-  eyeColor: string;          // hex color
+interface CatStats {
+  speed: number;      // 1-10
+  strength: number;   // 1-10
+  health: number;     // 1-10
+  luck: number;       // 1-10
+}
 
-  // Texture generation seed
-  textureSeed: string;       // Used for procedural generation
-
-  // 3D model traits
-  bodyShape: 'slim' | 'normal' | 'chubby';
-  earShape: 'pointed' | 'rounded' | 'folded';
-  tailLength: 'short' | 'medium' | 'long';
-
-  // Genetic inheritance (for future expansion)
-  genes: {
-    dominant: string[];      // Trait IDs
-    recessive: string[];     // Trait IDs
-  };
+interface CatData {
+  tokenId: number;
+  name: string;              // Kyrgyz name
+  stats: CatStats;
+  generation: number;        // 0 = Genesis, 1+ = Bred
+  parent1Id: number;         // 0 if Genesis
+  parent2Id: number;         // 0 if Genesis
+  ownerWallet: string;
+  birthTimestamp: number;
+  isImmortal: boolean;       // false for Gen 0, true for Gen 1+
+  isActive: boolean;         // Is this the player's active cat?
+  cooldownUntil?: number;    // Unix timestamp (if on breeding cooldown)
 }
 ```
 
@@ -468,40 +791,59 @@ interface CatDNA {
 
 ```json
 {
-  "name": "BlockCat #123",
-  "description": "A unique BlockCat born on the CryptoJam Minecraft server",
-  "image": "ipfs://QmXXX.../cat-123.png",
-  "animation_url": "ipfs://QmXXX.../cat-123.glb",
+  "name": "Aibek (BlockCat #123)",
+  "description": "A Gen 3 BlockCat bred on the CryptoJam Minecraft server. Grants Speed II and Strength I buffs when active.",
+  "image": "https://api.dicebear.com/7.x/bottts/svg?seed=123",
+  "external_url": "https://blockcats.xyz/cat/123",
   "attributes": [
-    {
-      "trait_type": "Primary Color",
-      "value": "#FF5733"
-    },
-    {
-      "trait_type": "Pattern",
-      "value": "Striped"
-    },
-    {
-      "trait_type": "Eye Color",
-      "value": "#00FF00"
-    },
-    {
-      "trait_type": "Body Shape",
-      "value": "Normal"
-    },
     {
       "trait_type": "Generation",
       "value": 3
     },
     {
+      "trait_type": "Speed",
+      "value": 8,
+      "max_value": 10
+    },
+    {
+      "trait_type": "Strength",
+      "value": 6,
+      "max_value": 10
+    },
+    {
+      "trait_type": "Health",
+      "value": 7,
+      "max_value": 10
+    },
+    {
+      "trait_type": "Luck",
+      "value": 5,
+      "max_value": 10
+    },
+    {
+      "trait_type": "Total Stats",
+      "value": 26,
+      "max_value": 40
+    },
+    {
+      "trait_type": "Buffs",
+      "value": "Speed II, Strength I, Regeneration II + Health Boost I, Luck I"
+    },
+    {
+      "trait_type": "Immortal",
+      "value": "Yes"
+    },
+    {
       "trait_type": "Birth Date",
-      "value": "2025-10-24T12:34:56Z"
+      "value": "2025-10-25T14:30:00Z"
     }
   ],
   "properties": {
-    "dna": "A3F2D9...",
-    "parents": [45, 78],
-    "tokenId": 123
+    "parents": {
+      "parent1": 45,
+      "parent2": 78
+    },
+    "totalStats": 26
   }
 }
 ```
@@ -514,16 +856,36 @@ interface CatDNA {
 model Cat {
   id              Int       @id @default(autoincrement())
   tokenId         Int       @unique
-  dna             String
-  textureUrl      String
-  model3dUrl      String?
-  parentIds       Int[]
+  name            String    // Kyrgyz name
+
+  // Stats
+  speed           Int       // 1-10
+  strength        Int       // 1-10
+  health          Int       // 1-10
+  luck            Int       // 1-10
+
+  // Lineage
+  generation      Int       // 0 = Genesis
+  parent1Id       Int       @default(0)
+  parent2Id       Int       @default(0)
+
+  // Ownership
   ownerWallet     String
+  isActive        Boolean   @default(false)
+
+  // Metadata
   birthTimestamp  DateTime  @default(now())
   metadataUri     String
-  minecraftUuid   String?   // UUID of in-game entity
+  isImmortal      Boolean   // false for Gen 0, true for Gen 1+
+
+  // Cooldown
+  cooldownUntil   DateTime?
+
+  // Minecraft
+  minecraftUuid   String?   // UUID of in-game entity (if spawned)
 
   @@index([ownerWallet])
+  @@index([generation])
   @@index([birthTimestamp])
 }
 
@@ -543,20 +905,47 @@ model PlayerClaim {
   @@unique([wallet, date])
 }
 
-model SpawnEvent {
+model Battle {
+  id              Int      @id @default(autoincrement())
+
+  // Players
+  player1Wallet   String
+  player2Wallet   String
+
+  // Cats
+  cat1TokenId     Int
+  cat2TokenId     Int
+
+  // Battle details
+  startTime       DateTime @default(now())
+  endTime         DateTime?
+
+  // Outcome
+  winnerWallet    String?
+  loserWallet     String?
+  isDraw          Boolean  @default(false)
+
+  // Result
+  childTokenId    Int?     // Bred cat (if won)
+
+  @@index([player1Wallet])
+  @@index([player2Wallet])
+  @@index([startTime])
+}
+
+model PlayerInventory {
   id          Int      @id @default(autoincrement())
-  timestamp   DateTime @default(now())
-  kittenId    Int
-  parentIds   Int[]
-  location    Json     // { x, y, z, world }
-  claimedBy   String?
-  claimedAt   DateTime?
+  wallet      String   @unique
+  catIds      Int[]    // Array of token IDs (max 5)
+  activeCatId Int?     // Currently active cat
+
+  @@index([wallet])
 }
 ```
 
 ---
 
-## API Endpoints (Simplified for 1-Day)
+## API Endpoints
 
 ### POST /api/minecraft/spawn
 
@@ -577,7 +966,12 @@ X-Plugin-Secret: your-api-secret
 ```typescript
 interface SpawnResponse {
   canSpawn: boolean;        // false if daily limit reached
-  dna?: string;             // Random DNA if canSpawn=true
+  stats?: {                 // Random stats 1-5 if canSpawn=true
+    speed: number;
+    strength: number;
+    health: number;
+    luck: number;
+  };
   message?: string;         // Error message if canSpawn=false
 }
 ```
@@ -586,23 +980,28 @@ interface SpawnResponse {
 ```typescript
 const today = new Date().toISOString().split('T')[0];
 
-// Check global daily limit
-if (spawnsToday >= MAX_KITTENS_PER_DAY) {
-  return { canSpawn: false, message: 'Daily limit reached' };
+// Check global daily limit for genesis cats
+if (genesisSpawnsToday >= MAX_GENESIS_SPAWNS_PER_DAY) {
+  return { canSpawn: false, message: 'Daily genesis limit reached' };
 }
 
-// Generate random DNA
-const dna = generateRandomDNA();
+// Generate random stats (1-5 for genesis)
+const stats = {
+  speed: randomInt(1, 5),
+  strength: randomInt(1, 5),
+  health: randomInt(1, 5),
+  luck: randomInt(1, 5)
+};
 
 // Increment counter
-spawnsToday++;
+genesisSpawnsToday++;
 
-return { canSpawn: true, dna };
+return { canSpawn: true, stats };
 ```
 
 ### POST /api/minecraft/claim
 
-Called by Minecraft plugin when player tames a cat.
+Called by Minecraft plugin when player tames a genesis cat.
 
 **Headers:**
 ```
@@ -614,6 +1013,12 @@ X-Plugin-Secret: your-api-secret
 interface ClaimRequest {
   wallet: string;      // Player's linked wallet (0x...)
   catUuid: string;     // Minecraft entity UUID
+  stats: {             // Stats from spawn
+    speed: number;
+    strength: number;
+    health: number;
+    luck: number;
+  };
 }
 ```
 
@@ -622,7 +1027,9 @@ interface ClaimRequest {
 interface ClaimResponse {
   success: boolean;
   tokenId?: number;         // NFT token ID if successful
+  name?: string;            // Kyrgyz name
   transactionHash?: string; // Blockchain tx hash
+  metadata?: object;        // Full NFT metadata
   error?: string;           // Error message if failed
 }
 ```
@@ -630,37 +1037,252 @@ interface ClaimResponse {
 **Logic:**
 ```typescript
 // 1. Check player daily limit
-const playerClaims = getPlayerClaimsToday(wallet);
-if (playerClaims >= MAX_CLAIMS_PER_PLAYER_PER_DAY) {
-  return { success: false, error: 'You already claimed today!' };
+const playerClaims = getPlayerGenesisClaimsToday(wallet);
+if (playerClaims >= MAX_GENESIS_CLAIMS_PER_PLAYER_PER_DAY) {
+  return { success: false, error: 'You already claimed your daily genesis cat!' };
 }
 
-// 2. Generate cat image (DiceBear)
-const imageUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${catUuid}`;
+// 2. Check inventory space (max 5 cats)
+const inventory = await getPlayerInventory(wallet);
+if (inventory.length >= 5) {
+  return { success: false, error: 'Your cat inventory is full! (Max 5)' };
+}
 
-// 3. Create metadata JSON
+// 3. Generate Kyrgyz name
+const name = generateKyrgyzName();
+
+// 4. Create metadata JSON
 const metadata = {
-  name: `BlockCat #${nextTokenId}`,
-  description: 'A BlockCat from CryptoJam',
-  image: imageUrl,
-  attributes: [/* DNA traits */]
+  name: `${name} (BlockCat #${nextTokenId})`,
+  description: `A Gen 0 BlockCat from CryptoJam. Stats: Speed ${stats.speed}, Strength ${stats.strength}, Health ${stats.health}, Luck ${stats.luck}`,
+  image: `https://api.dicebear.com/7.x/bottts/svg?seed=${catUuid}`,
+  attributes: [
+    { trait_type: 'Generation', value: 0 },
+    { trait_type: 'Speed', value: stats.speed, max_value: 10 },
+    { trait_type: 'Strength', value: stats.strength, max_value: 10 },
+    { trait_type: 'Health', value: stats.health, max_value: 10 },
+    { trait_type: 'Luck', value: stats.luck, max_value: 10 },
+    { trait_type: 'Immortal', value: 'No' }
+  ]
 };
 
-// 4. Upload metadata to IPFS
+// 5. Upload metadata to IPFS
 const metadataUri = await uploadToIPFS(metadata);
 
-// 5. Mint NFT on-chain
-const tx = await contract.mintCat(wallet, dna, metadataUri, [0, 0]);
+// 6. Mint NFT on-chain
+const tx = await contract.mintGenesisCat(
+  wallet,
+  name,
+  metadataUri,
+  [stats.speed, stats.strength, stats.health, stats.luck]
+);
 await tx.wait();
 
-// 6. Increment player claims
+// 7. Add to player inventory
+await addCatToInventory(wallet, nextTokenId, false); // not active by default
 incrementPlayerClaims(wallet);
 
 return {
   success: true,
   tokenId: nextTokenId,
-  transactionHash: tx.hash
+  name,
+  transactionHash: tx.hash,
+  metadata
 };
+```
+
+### POST /api/battle/challenge
+
+Called by Minecraft plugin when player challenges another player.
+
+**Headers:**
+```
+X-Plugin-Secret: your-api-secret
+```
+
+**Request:**
+```typescript
+interface ChallengeRequest {
+  challengerWallet: string;
+  targetWallet: string;
+  challengerCatId: number;  // Active cat token ID
+}
+```
+
+**Response:**
+```typescript
+interface ChallengeResponse {
+  success: boolean;
+  battleId?: string;
+  error?: string;
+}
+```
+
+### POST /api/battle/accept
+
+Called by Minecraft plugin when player accepts battle.
+
+**Headers:**
+```
+X-Plugin-Secret: your-api-secret
+```
+
+**Request:**
+```typescript
+interface AcceptRequest {
+  battleId: string;
+  accepterWallet: string;
+  accepterCatId: number;  // Active cat token ID
+}
+```
+
+**Response:**
+```typescript
+interface AcceptResponse {
+  success: boolean;
+  battleStarted: boolean;
+  error?: string;
+}
+```
+
+### POST /api/battle/end
+
+Called by Minecraft plugin when battle ends (death, quit, or timeout).
+
+**Headers:**
+```
+X-Plugin-Secret: your-api-secret
+```
+
+**Request:**
+```typescript
+interface BattleEndRequest {
+  battleId: string;
+  winnerWallet?: string;  // null if draw
+  loserWallet?: string;   // null if draw
+  isDraw: boolean;
+}
+```
+
+**Response:**
+```typescript
+interface BattleEndResponse {
+  success: boolean;
+  childTokenId?: number;     // Bred kitten (if not draw)
+  childName?: string;
+  childStats?: {
+    speed: number;
+    strength: number;
+    health: number;
+    luck: number;
+  };
+  transactionHash?: string;
+  cooldownSet: boolean;      // Was loser's cat put on cooldown?
+  error?: string;
+}
+```
+
+**Logic:**
+```typescript
+// If draw, no breeding
+if (isDraw) {
+  await updateBattle(battleId, { isDraw: true, endTime: new Date() });
+  return { success: true, cooldownSet: false };
+}
+
+// Get parent cats
+const battle = await getBattle(battleId);
+const parent1 = await contract.getCatData(battle.cat1TokenId);
+const parent2 = await contract.getCatData(battle.cat2TokenId);
+
+// Check winner's inventory
+const inventory = await getPlayerInventory(winnerWallet);
+if (inventory.length >= 5) {
+  // Auto-delete weakest cat
+  const weakestCat = findWeakestCat(inventory);
+  await deleteCat(weakestCat.tokenId);
+}
+
+// Generate Kyrgyz name for child
+const childName = generateKyrgyzName();
+
+// Create metadata
+const childGen = Math.max(parent1.generation, parent2.generation) + 1;
+const metadata = {
+  name: `${childName} (BlockCat #${nextTokenId})`,
+  description: `A Gen ${childGen} BlockCat bred through PvP battle`,
+  // ... stats, attributes, etc
+};
+
+const metadataUri = await uploadToIPFS(metadata);
+
+// Breed cats on-chain
+const tx = await contract.breedCats(
+  winnerWallet,
+  battle.cat1TokenId,
+  battle.cat2TokenId,
+  childName,
+  metadataUri
+);
+await tx.wait();
+
+// Get child stats from contract
+const childData = await contract.getCatData(nextTokenId);
+
+// Set 24h cooldown on loser's cat
+const loserCatId = loserWallet === battle.player1Wallet ? battle.cat1TokenId : battle.cat2TokenId;
+await contract.setCooldown(loserCatId, 86400); // 24 hours
+
+// Update battle record
+await updateBattle(battleId, {
+  winnerWallet,
+  loserWallet,
+  childTokenId: nextTokenId,
+  endTime: new Date()
+});
+
+return {
+  success: true,
+  childTokenId: nextTokenId,
+  childName,
+  childStats: childData.stats,
+  transactionHash: tx.hash,
+  cooldownSet: true
+};
+```
+
+### GET /api/player/cats?wallet=0x...
+
+Get all cats owned by a player.
+
+**Response:**
+```typescript
+interface PlayerCatsResponse {
+  cats: CatData[];
+  activeCat?: CatData;
+  total: number;
+}
+```
+
+### POST /api/player/set-active
+
+Set active cat for a player.
+
+**Request:**
+```typescript
+interface SetActiveRequest {
+  wallet: string;
+  tokenId: number;
+}
+```
+
+**Response:**
+```typescript
+interface SetActiveResponse {
+  success: boolean;
+  previousActiveCat?: number;  // Token ID of previous active cat
+  error?: string;
+}
 ```
 
 ### GET /api/cats
@@ -673,35 +1295,15 @@ interface CatsResponse {
   cats: {
     tokenId: number;
     owner: string;
-    image: string;
     name: string;
+    generation: number;
+    stats: CatStats;
+    isImmortal: boolean;
+    image: string;
     mintedAt: string;
   }[];
   total: number;
 }
-```
-
-**Logic:**
-```typescript
-// Read from smart contract
-const totalSupply = await contract.totalSupply();
-const cats = [];
-
-for (let i = 0; i < totalSupply; i++) {
-  const owner = await contract.ownerOf(i);
-  const uri = await contract.tokenURI(i);
-  const metadata = await fetchIPFS(uri);
-
-  cats.push({
-    tokenId: i,
-    owner,
-    image: metadata.image,
-    name: metadata.name,
-    mintedAt: metadata.properties?.birthDate
-  });
-}
-
-return { cats, total: totalSupply };
 ```
 
 ### GET /api/cat/[tokenId]
@@ -713,14 +1315,20 @@ Get individual cat details.
 interface CatDetails {
   tokenId: number;
   owner: string;
-  dna: string;
+  name: string;
+  stats: CatStats;
+  generation: number;
+  parent1Id: number;
+  parent2Id: number;
+  isImmortal: boolean;
+  cooldownUntil?: number;
   image: string;
   metadata: {
     name: string;
     description: string;
     attributes: Array<{
       trait_type: string;
-      value: string;
+      value: string | number;
     }>;
   };
 }

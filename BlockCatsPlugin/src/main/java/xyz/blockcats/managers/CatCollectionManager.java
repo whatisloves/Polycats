@@ -220,4 +220,74 @@ public class CatCollectionManager {
         // Remove active cat entity when player leaves
         removeActiveCat(player);
     }
+
+    /**
+     * Get the token ID of the active cat
+     */
+    public int getActiveCatTokenId(Player player) {
+        final String activeCatName = getActiveCat(player);
+        if (activeCatName == null) {
+            return -1;
+        }
+
+        final List<CollectedCat> cats = getPlayerCats(player);
+        final CollectedCat activeCat = cats.stream()
+            .filter(c -> c.getName().equals(activeCatName))
+            .findFirst()
+            .orElse(null);
+
+        return activeCat != null ? activeCat.getTokenId() : -1;
+    }
+
+    /**
+     * Refresh player's cat collection from backend
+     * Called after battles to sync with backend storage
+     */
+    public void refreshPlayerCats(Player player) {
+        final String wallet = plugin.getWalletManager().getWallet(player);
+        if (wallet == null) {
+            return;
+        }
+
+        // Call API to get updated inventory
+        plugin.getApiClient().getInventory(wallet).thenAccept(response -> {
+            if (response == null || response.cats == null) {
+                return;
+            }
+
+            // Update player's collection
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                final UUID playerUuid = player.getUniqueId();
+                final List<CollectedCat> newCats = new ArrayList<>();
+
+                for (xyz.blockcats.api.ApiClient.CatInventoryItem cat : response.cats) {
+                    newCats.add(new CollectedCat(
+                        cat.name,
+                        "", // DNA not needed for now
+                        cat.tokenId,
+                        cat.textureUrl
+                    ));
+                }
+
+                playerCats.put(playerUuid, newCats);
+
+                // Update active cat if it changed
+                if (response.activeCatId != null) {
+                    final CollectedCat activeCat = newCats.stream()
+                        .filter(c -> c.getTokenId() == response.activeCatId)
+                        .findFirst()
+                        .orElse(null);
+
+                    if (activeCat != null) {
+                        activeCats.put(playerUuid, activeCat.getName());
+                    }
+                }
+
+                saveCats();
+
+                player.sendMessage("§7Your cat collection has been updated!");
+                player.sendMessage("§7Use /mycats to view your cats");
+            });
+        });
+    }
 }
