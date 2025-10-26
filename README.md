@@ -105,7 +105,9 @@ cryptojam/
 
 **Network**: Polygon Amoy Testnet  
 **Contract**: BlockCatsNFT (ERC-721)  
-**Address**: `0x...` (to be deployed)
+**Address**: `0x124C26309316B17aF261fB6dc302177e3475D0DC`
+
+**Verification**: [View on PolygonScan](https://amoy.polygonscan.com/address/0x124C26309316B17aF261fB6dc302177e3475D0DC#events)
 
 Features:
 
@@ -113,6 +115,7 @@ Features:
 - Lineage tracking (parent IDs)
 - Birth timestamps
 - IPFS metadata URIs
+- Breeding mechanics with genetic inheritance
 
 ## 🌐 API Endpoints
 
