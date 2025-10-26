@@ -72,6 +72,7 @@ private-keys/
 
 # Claude/AI
 .claude/
+.cursor/
 
 # Testing
 *.test.js
